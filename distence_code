@@ -1,5 +1,4 @@
 # -*- coding: cp936 -*-
-# import pyperclip
 import cv2
 import math
 import random
@@ -8,29 +7,26 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 
-def pt_distance(pt1, pt2):  # 定义pt_distance函数，接受两个参数pt1和pt2
-    dist = math.sqrt(pow(pt1[0]-pt2[0], 2) + pow(pt1[1]-pt2[1], 2))  # 计算欧式距离。math.sqrt来计算两点之间距离的平方根
-    return dist  # 将计算出的距离值返回给调用该函数的代码
+def pt_distance(pt1, pt2):
+    dist = math.sqrt(pow(pt1[0]-pt2[0], 2) + pow(pt1[1]-pt2[1], 2))
+    return dist
 
 
 path = '../Date/splattering/super_extracted/extr 3.0x-b_frame225.png'
 img = cv2.imread(path)
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-ret, thresh = cv2.threshold(gray, 220, 255, cv2.THRESH_BINARY)  # 阈值不易太大，不然计算轮廓中点时出错
-contours, hierarchy = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)  # 选用_SIMPLE更快速且结果一致
-# cv2.imshow('thresh', thresh)  # 通过查看二值化图像，可以看出轮廓的大致区间
-# print(contours)  # 输出的为检测到轮廓的点集
-print("检测到的轮廓数量：", len(contours))
+ret, thresh = cv2.threshold(gray, 220, 255, cv2.THRESH_BINARY)
+contours, hierarchy = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+cv2.imshow('thresh', thresh)
+# print(contours)
+print("Number of contours detected：", len(contours))
 temp1 = img.copy()
-# cv2.drawContours(temp1, contours, -1, (10, 10, 166), 1)  # 将轮廓标红
-X = 9  # 轮廓一,红(结合轮廓宽度考虑误差补偿)
-Y = 12  # 轮廓二,蓝
+X = 9
+Y = 12
 
 areas = [cv2.contourArea(contour) for contour in contours]
-# 获取面积排名前六名的轮廓索引
 sorted_indices = sorted(range(len(areas)), key=lambda k: areas[k], reverse=True)
 top_three_indices = sorted_indices[:7]
-# 如果最大面积的轮廓在前六名之内，则不绘制其序号
 if sorted_indices[0] in top_three_indices:
     del top_three_indices[0]
 for i, contour in enumerate(contours):
@@ -38,85 +34,75 @@ for i, contour in enumerate(contours):
     # print("Contour", i, "Area:", area)
 
     if i in top_three_indices:
-        # 通过轮廓的矩来计算轮廓中心点
         M = cv2.moments(contour)
-        if M["m00"] == 0:  # 如果"m00"=0时就跳过该轮廓的计算
+        if M["m00"] == 0:
             continue
         cX = int(M["m10"] / M["m00"])
         cY = int(M["m01"] / M["m00"])
-        # 在轮廓中心点处绘制序号
         cv2.putText(temp1, str(i), (cX, cY), cv2.FONT_HERSHEY_DUPLEX, 0.8, (35, 55, 255), 1)
         cv2.imshow('Numbers', temp1)
 
-flag = False     # flag是布尔值，初始值为False
-minDist = 1000   # 用于存储当前最小的轮廓距离，初值为1000
-minPt0 = (0, 0)  # 用于存储当前最接近的两个点，初值都为(0,0)
+flag = False
+minDist = 1000
+minPt0 = (0, 0)
 minPt1 = (0, 0)
 
-for i in range(0, len(contours[X])):  # len(contours[1])为contours[1]内数组的数量，i是0到len(contours[X])内所有数组
-  # print(len(contours[1]))  # 输出contours[1]内点的数量，是一个数
-  pt1 = tuple(contours[X][i][0])  # 获取当前点的坐标
-  # print('X的轮廓点集：', pt1)  # 直接输出的为像素坐标
-  min = 1000  # 初始化变量min，随后与计算出的distance值作比较，将更小的值赋给min
-  min_pt = (0, 0)  # 初始化最小距离对应的点为(0,0)
-  min_point = (0, 0)  # 初始化另一个最小距离对应的点为(0,0)
+for i in range(0, len(contours[X])):
+  # print(len(contours[1]))
+  pt1 = tuple(contours[X][i][0])
+  min = 1000
+  min_pt = (0, 0)
+  min_point = (0, 0)
 
-  for j in range(0, len(contours[Y])):  # 遍历某轮廓中的每个点
-    pt2 = tuple(contours[Y][j][0])  # 获取当前点的坐标
-    # print('Y的轮廓点集：', pt2)
-    distance = pt_distance(pt1, pt2)  # 调用公式计算两点间的欧式距离
-    if distance < min:  # 若计算出的欧式距离小于设置的min=1000
-      min = distance  # 将更小值赋给min
-      min_pt = pt2  # 将最小值点的坐标赋给min_pt
-      min_point = pt1  # 将最小值点的坐标赋给min_point
-  if min < minDist:  # 如果最小的轮廓距离小于全局最小轮廓距离，就执行下面的代码块
-    minDist = min  # 更新最小的轮廓距离
-    minPt0 = min_point  # 将最接近的两个点存储为全局最小轮廓距离对应的点
+  for j in range(0, len(contours[Y])):
+    pt2 = tuple(contours[Y][j][0])
+    distance = pt_distance(pt1, pt2)
+    if distance < min:
+      min = distance
+      min_pt = pt2
+      min_point = pt1
+  if min < minDist:
+    minDist = min
+    minPt0 = min_point
     minPt1 = min_pt
 
-    contour_index1 = X  # 设置第一个目标轮廓的索引
-    target_contour1 = contours[contour_index1]  # 即第一个目标轮廓，可以引用的轮廓目标
-    contour_index2 = Y  # 设置第二个目标轮廓的索引
-    target_contour2 = contours[contour_index2]  # 即第二个目标轮廓，可以引用的轮廓目标
-    cv2.drawContours(img, [target_contour1], -1, (255, 0, 255), 1)  # 用紫色线在原图上绘制目标轮廓
-    cv2.drawContours(img, [target_contour2], -1, (255, 255, 0), 1)  # 用蓝色线在原图上绘制目标轮廓
+    contour_index1 = X
+    target_contour1 = contours[contour_index1]
+    contour_index2 = Y
+    target_contour2 = contours[contour_index2]
+    cv2.drawContours(img, [target_contour1], -1, (255, 0, 255), 1)
+    cv2.drawContours(img, [target_contour2], -1, (255, 255, 0), 1)
 
-  temp2 = img.copy()  # 复制当前图像到一个临时变量temp2中
-  cv2.line(temp2, min_point, min_pt, (0, 255, 0), 1, cv2.LINE_AA)  # 在temp2图像上从pt到min_pt画一条线，颜色绿色，线宽1，线型是抗锯齿线AA
-  cv2.circle(temp2, min_point, 2, (255, 0, 0), -1, cv2.LINE_AA)  # 在temp2图像上以pt点为圆心画圆，圆的半径2，颜色是蓝色，-1表填充
-  cv2.circle(temp2, min_pt, 2, (0, 0, 255), -1, cv2.LINE_AA)  # BGR.在temp2图像上以min_pt点为圆心画圆，圆的半径2，红色，-1表填充
-  cv2.imshow("Running", temp2)  # 显示动态图像
-  if cv2.waitKey(1) & 0xFF == 27:  # 按下Esc键退出
-    flag = True  # 设置变量flag为True
-    break  # 结束循环
-  if flag:  # 检查变量flag是否为True。如果是，则执行后面的代码
-    break  # 结束循环
+  temp2 = img.copy()
+  cv2.line(temp2, min_point, min_pt, (0, 255, 0), 1, cv2.LINE_AA)
+  cv2.circle(temp2, min_point, 2, (255, 0, 0), -1, cv2.LINE_AA)
+  cv2.circle(temp2, min_pt, 2, (0, 0, 255), -1, cv2.LINE_AA)
+  cv2.imshow("Running", temp2)
+  if cv2.waitKey(1) & 0xFF == 27:
+    flag = True
+    break
+  if flag:
+    break
 
-font = cv2.FONT_HERSHEY_SIMPLEX  # 设置字体
-cv2.line(img, minPt0, minPt1, (0, 255, 0), 1, cv2.LINE_AA)  # 运动的直线，为绿色
-cv2.circle(img, minPt0, 2, (255, 0, 0), -1, cv2.LINE_AA)  # 颜色通道：BGR
+font = cv2.FONT_HERSHEY_SIMPLEX
+cv2.line(img, minPt0, minPt1, (0, 255, 0), 1, cv2.LINE_AA)
+cv2.circle(img, minPt0, 2, (255, 0, 0), -1, cv2.LINE_AA)
 cv2.circle(img, minPt1, 2, (0, 0, 255), -1, cv2.LINE_AA)
-# cv2.putText(img, ("min=%0.3f" % minDist), (minPt1[0], minPt1[1]+15), font, 0.6, (0, 255, 0), 2)
+cv2.putText(img, ("min=%0.3f" % minDist), (minPt1[0], minPt1[1]+15), font, 0.6, (0, 255, 0), 2)
 
 image = Image.open(path)
-dpi = image.info.get('dpi')  # 获取图像的DPI
+dpi = image.info.get('dpi')
 numbers = dpi
-dpi_value = random.choice(numbers)  # 从一组的dpi中选取一个值来做计算
-Distence = (2*minDist*25.4)/dpi_value  # *计算图上的实际距离，若乘25.4则表示毫米。公式原理？
-rounded = round(minDist, 3)  # 两点间的像素距离，四舍五入保留到小数点后三位
+dpi_value = random.choice(numbers)
+Distence = (2*minDist*25.4)/dpi_value
+rounded = round(minDist, 3)
 cv2.putText(img, ("min=%0.3fcm" % Distence), (minPt1[0], minPt1[1]+15), font, 0.6, (0, 255, 0), 2)
 
-# print('水平与垂直方向上的DPI:', dpi)
-print('最短距离点坐标：', [minPt0, minPt1])
-print('选取的DPI:', dpi_value)
-print('目标轮廓间最短像素距离:', rounded)  # 显示像素距离
-# print('目标轮廓间最短图上距离:{}cm'.format(round(Distence, 3)))  # 显示实际距离，结果保留3位小数，且后接单位
-print('目标轮廓间最短图上距离:{}mm'.format(round(Distence, 3)))
-cv2.imshow('result', img)  # cv2.imshow()默认的是在像素坐标系内显示图片
-# cv2.imwrite('result.png', img)
+print('Shortest distance point coordinates：', [minPt0, minPt1])
+print('Minimum pixel distance between target contours:', rounded)
+print('Minimum graphed distance between target contours:{}mm'.format(round(Distence, 3)))
+cv2.imshow('result', img)
+cv2.imwrite('result.png', img)
 
-# 将输出值复制到剪贴板
-# output_value = round(Distence, 3)
-# pyperclip.copy(str(output_value))
 cv2.waitKey(0)
 cv2.destroyAllWindows()
